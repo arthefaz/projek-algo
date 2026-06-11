@@ -3,23 +3,52 @@
 
 using namespace std;
 
+/*==================================================
+    LINKED LIST FILE REPOSITORY
+==================================================*/
+
 struct FileNode
 {
     int idFile;
     string namaFile;
     int ukuranFile;
+
+    // File berada di folder mana
+    string namaFolder;
+
     FileNode *next;
 };
 
+// Head Linked List
 FileNode *head = NULL;
+
+/*==================================================
+    STACK UNDO
+==================================================*/
 
 struct UndoNode
 {
     string aktivitas;
+
+    // Data file yang disimpan untuk undo
+    int idFile;
+    string namaFile;
+    int ukuranFile;
+    string namaFolder;
+
+    // Khusus rename
+    string namaLama;
+    string namaBaru;
+
     UndoNode *next;
 };
 
+// Top Stack
 UndoNode *top = NULL;
+
+/*==================================================
+    TREE FOLDER
+==================================================*/
 
 struct Folder
 {
@@ -29,34 +58,47 @@ struct Folder
     Folder *right;
 };
 
+// Root Tree
 Folder *root = NULL;
 
-void pushUndo(string aktivitas)
+/*==================================================
+    FUNGSI STACK
+==================================================*/
+
+// Push ke Stack
+void pushUndo(UndoNode *data)
 {
-    UndoNode *baru = new UndoNode();
-
-    baru->aktivitas = aktivitas;
-    baru->next = top;
-
-    top = baru;
+    data->next = top;
+    top = data;
 }
 
-void undo()
+/*==================================================
+    CEK FOLDER ADA ATAU TIDAK
+==================================================*/
+
+bool cariFolder(Folder *node, string nama)
 {
-    if (top == NULL)
+    if (node == NULL)
     {
-        cout << "Tidak ada aktivitas\n";
-        return;
+        return false;
     }
 
-    UndoNode *hapus = top;
+    if (node->namaFolder == nama)
+    {
+        return true;
+    }
 
-    cout << "Undo : " << top->aktivitas << endl;
+    if (nama < node->namaFolder)
+    {
+        return cariFolder(node->left, nama);
+    }
 
-    top = top->next;
-
-    delete hapus;
+    return cariFolder(node->right, nama);
 }
+
+/*==================================================
+    TAMBAH FILE
+==================================================*/
 
 void tambahFile()
 {
@@ -70,6 +112,17 @@ void tambahFile()
 
     cout << "Ukuran File (KB) : ";
     cin >> baru->ukuranFile;
+
+    cout << "Folder : ";
+    cin >> baru->namaFolder;
+
+    // Folder harus ada terlebih dahulu
+    if (!cariFolder(root, baru->namaFolder))
+    {
+        cout << "Folder tidak ditemukan!\n";
+        delete baru;
+        return;
+    }
 
     baru->next = NULL;
 
@@ -89,29 +142,52 @@ void tambahFile()
         cur->next = baru;
     }
 
-    pushUndo("Tambah File");
+    // Simpan ke stack untuk undo
+    UndoNode *undoBaru = new UndoNode();
+
+    undoBaru->aktivitas = "TAMBAH";
+    undoBaru->namaFile = baru->namaFile;
+
+    pushUndo(undoBaru);
+
+    cout << "File berhasil ditambahkan\n";
 }
+
+/*==================================================
+    TAMPIL FILE
+==================================================*/
 
 void tampilFile()
 {
+    if (head == NULL)
+    {
+        cout << "Belum ada file\n";
+        return;
+    }
+
     FileNode *cur = head;
 
     while (cur != NULL)
     {
-        cout << "ID     : " << cur->idFile << endl;
-        cout << "Nama   : " << cur->namaFile << endl;
-        cout << "Ukuran : " << cur->ukuranFile << " KB" << endl;
-        cout << "------------------" << endl;
+        cout << "\nID File      : " << cur->idFile;
+        cout << "\nNama File    : " << cur->namaFile;
+        cout << "\nUkuran File  : " << cur->ukuranFile << " KB";
+        cout << "\nFolder       : " << cur->namaFolder;
+        cout << "\n------------------------\n";
 
         cur = cur->next;
     }
 }
 
+/*==================================================
+    CARI FILE
+==================================================*/
+
 void cariFile()
 {
     string nama;
 
-    cout << "Masukkan nama file : ";
+    cout << "Nama File : ";
     cin >> nama;
 
     FileNode *cur = head;
@@ -120,11 +196,12 @@ void cariFile()
     {
         if (cur->namaFile == nama)
         {
-            cout << "File ditemukan" << endl;
+            cout << "\nFile ditemukan\n";
 
-            cout << cur->idFile << endl;
-            cout << cur->namaFile << endl;
-            cout << cur->ukuranFile << endl;
+            cout << "ID      : " << cur->idFile << endl;
+            cout << "Nama    : " << cur->namaFile << endl;
+            cout << "Ukuran  : " << cur->ukuranFile << endl;
+            cout << "Folder  : " << cur->namaFolder << endl;
 
             return;
         }
@@ -132,46 +209,59 @@ void cariFile()
         cur = cur->next;
     }
 
-    cout << "File tidak ditemukan" << endl;
+    cout << "File tidak ditemukan\n";
 }
+
+/*==================================================
+    RENAME FILE
+==================================================*/
 
 void renameFile()
 {
-    string lama;
-    string baru;
+    string namaLama;
+    string namaBaru;
 
-    cout << "Nama lama : ";
-    cin >> lama;
+    cout << "Nama Lama : ";
+    cin >> namaLama;
 
     FileNode *cur = head;
 
     while (cur != NULL)
     {
-        if (cur->namaFile == lama)
+        if (cur->namaFile == namaLama)
         {
-            cout << "Nama baru : ";
-            cin >> baru;
+            cout << "Nama Baru : ";
+            cin >> namaBaru;
 
-            cur->namaFile = baru;
+            UndoNode *undoBaru = new UndoNode();
 
-            pushUndo("Rename File");
+            undoBaru->aktivitas = "RENAME";
+            undoBaru->namaLama = namaLama;
+            undoBaru->namaBaru = namaBaru;
 
-            cout << "Berhasil" << endl;
+            pushUndo(undoBaru);
 
+            cur->namaFile = namaBaru;
+
+            cout << "Rename berhasil\n";
             return;
         }
 
         cur = cur->next;
     }
 
-    cout << "File tidak ditemukan" << endl;
+    cout << "File tidak ditemukan\n";
 }
+
+/*==================================================
+    HAPUS FILE
+==================================================*/
 
 void hapusFile()
 {
     string nama;
 
-    cout << "Nama file : ";
+    cout << "Nama File : ";
     cin >> nama;
 
     FileNode *cur = head;
@@ -181,6 +271,18 @@ void hapusFile()
     {
         if (cur->namaFile == nama)
         {
+            // Simpan data ke stack
+            UndoNode *undoBaru = new UndoNode();
+
+            undoBaru->aktivitas = "HAPUS";
+
+            undoBaru->idFile = cur->idFile;
+            undoBaru->namaFile = cur->namaFile;
+            undoBaru->ukuranFile = cur->ukuranFile;
+            undoBaru->namaFolder = cur->namaFolder;
+
+            pushUndo(undoBaru);
+
             if (prev == NULL)
             {
                 head = cur->next;
@@ -192,10 +294,7 @@ void hapusFile()
 
             delete cur;
 
-            pushUndo("Hapus File");
-
-            cout << "File berhasil dihapus" << endl;
-
+            cout << "File berhasil dihapus\n";
             return;
         }
 
@@ -203,8 +302,107 @@ void hapusFile()
         cur = cur->next;
     }
 
-    cout << "File tidak ditemukan" << endl;
+    cout << "File tidak ditemukan\n";
 }
+
+/*==================================================
+    UNDO
+==================================================*/
+
+void undo()
+{
+    if (top == NULL)
+    {
+        cout << "Tidak ada aktivitas untuk diundo\n";
+        return;
+    }
+
+    UndoNode *ambil = top;
+
+    /*==============================================
+        UNDO TAMBAH FILE
+        -> file yang ditambah akan dihapus
+    ==============================================*/
+
+    if (ambil->aktivitas == "TAMBAH")
+    {
+        FileNode *cur = head;
+        FileNode *prev = NULL;
+
+        while (cur != NULL)
+        {
+            if (cur->namaFile == ambil->namaFile)
+            {
+                if (prev == NULL)
+                {
+                    head = cur->next;
+                }
+                else
+                {
+                    prev->next = cur->next;
+                }
+
+                delete cur;
+                break;
+            }
+
+            prev = cur;
+            cur = cur->next;
+        }
+
+        cout << "Undo tambah file berhasil\n";
+    }
+
+    /*==============================================
+        UNDO HAPUS FILE
+        -> file yang dihapus dikembalikan
+    ==============================================*/
+
+    else if (ambil->aktivitas == "HAPUS")
+    {
+        FileNode *baru = new FileNode();
+
+        baru->idFile = ambil->idFile;
+        baru->namaFile = ambil->namaFile;
+        baru->ukuranFile = ambil->ukuranFile;
+        baru->namaFolder = ambil->namaFolder;
+
+        baru->next = head;
+        head = baru;
+
+        cout << "Undo hapus file berhasil\n";
+    }
+
+    /*==============================================
+        UNDO RENAME
+        -> nama baru dikembalikan ke nama lama
+    ==============================================*/
+
+    else if (ambil->aktivitas == "RENAME")
+    {
+        FileNode *cur = head;
+
+        while (cur != NULL)
+        {
+            if (cur->namaFile == ambil->namaBaru)
+            {
+                cur->namaFile = ambil->namaLama;
+
+                cout << "Undo rename berhasil\n";
+                break;
+            }
+
+            cur = cur->next;
+        }
+    }
+
+    top = top->next;
+    delete ambil;
+}
+
+/*==================================================
+    TREE FOLDER
+==================================================*/
 
 Folder *tambahFolder(Folder *node, string nama)
 {
@@ -232,6 +430,10 @@ Folder *tambahFolder(Folder *node, string nama)
     return node;
 }
 
+/*==================================================
+    TAMPIL FOLDER (INORDER)
+==================================================*/
+
 void tampilFolder(Folder *node)
 {
     if (node != NULL)
@@ -244,63 +446,75 @@ void tampilFolder(Folder *node)
     }
 }
 
+/*==================================================
+    MAIN
+==================================================*/
+
 int main()
 {
     int pilih;
 
     do
     {
-        cout << "\n===== REPOSITORY =====" << endl;
+        cout << "\n===== SISTEM REPOSITORY =====\n";
 
-        cout << "1. Tambah File" << endl;
-        cout << "2. Hapus File" << endl;
-        cout << "3. Rename File" << endl;
-        cout << "4. Undo" << endl;
-        cout << "5. Tampilkan Folder" << endl;
-        cout << "6. Cari File" << endl;
-        cout << "7. Tambah Folder" << endl;
-        cout << "0. Keluar" << endl;
+        cout << "1. Tambah Folder\n";
+        cout << "2. Tampilkan Folder\n";
 
-        cout << "Masukkan Pilihan (ANGKA) : ";
+        cout << "3. Tambah File\n";
+        cout << "4. Tampilkan File\n";
+        cout << "5. Cari File\n";
+        cout << "6. Rename File\n";
+        cout << "7. Hapus File\n";
+
+        cout << "8. Undo\n";
+
+        cout << "0. Keluar\n";
+
+        cout << "\nPilihan : ";
         cin >> pilih;
 
         switch (pilih)
         {
         case 1:
-            tambahFile();
-            break;
-
-        case 2:
-            hapusFile();
-            break;
-
-        case 3:
-            renameFile();
-            break;
-
-        case 4:
-            undo();
-            break;
-
-        case 5:
-            tampilFolder(root);
-            break;
-
-        case 6:
-            cariFile();
-            break;
-
-        case 7:
         {
-            string nama;
+            string namaFolder;
 
             cout << "Nama Folder : ";
-            cin >> nama;
+            cin >> namaFolder;
 
-            root = tambahFolder(root, nama);
+            root = tambahFolder(root, namaFolder);
 
             break;
         }
+
+        case 2:
+            tampilFolder(root);
+            break;
+
+        case 3:
+            tambahFile();
+            break;
+
+        case 4:
+            tampilFile();
+            break;
+
+        case 5:
+            cariFile();
+            break;
+
+        case 6:
+            renameFile();
+            break;
+
+        case 7:
+            hapusFile();
+            break;
+
+        case 8:
+            undo();
+            break;
         }
 
     } while (pilih != 0);
