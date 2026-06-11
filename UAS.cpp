@@ -25,9 +25,10 @@ FITUR MINIMAL (SESUAI REQUIREMENT):
 FITUR TAMBAHAN:
   - Tambah Folder        - Tambah folder baru (BST insert)
   - Tampilkan Semua File - Tampilkan semua file di semua folder
-  - Edit Konten File     - File konten disimpan dan otomatis kalkulasi size
+  - Edit File            - Edit konten file dan auto update ukuran
+  - Tampilkan File       - Tampilkan daftar file dalam folder
 
-KARKTERISTIK:
+KARAKTERISTIK:
   - Ukuran file otomatis dihitung dari panjang konten (dalam KB)
   - Setiap operasi modifikasi membuat snapshot untuk undo
   - Deep copy digunakan untuk snapshot integrity
@@ -362,6 +363,57 @@ void renameFile()
     }
 }
 
+void editFile()
+{
+    string namaFolder;
+    cout << "Nama Folder : ";
+    cin >> namaFolder;
+
+    string nama;
+    cout << "Nama file : ";
+    cin >> nama;
+    cin.ignore();  // Clear newline
+
+    Folder *folder = cariFolder(namaFolder);
+
+    if (folder == NULL)
+    {
+        cout << "Folder tidak ditemukan" << endl;
+        return;
+    }
+
+    FileNode *file = cariFolderFile(folder, nama);
+
+    if (file != NULL)
+    {
+        cout << "\nKonten lama:" << endl;
+        cout << "---" << endl;
+        cout << file->isiFile << endl;
+        cout << "---" << endl;
+
+        cout << "\nMasukkan konten baru (gunakan . di awal baris untuk selesai):" << endl;
+        string konten = "";
+        string baris;
+        while (getline(cin, baris))
+        {
+            if (baris == ".")
+                break;
+            konten += baris + "\n";
+        }
+
+        file->isiFile = konten;
+        file->ukuranFile = hitungUkuranFile(konten);  // Recalculate size
+
+        cout << "File berhasil di-edit (Ukuran baru: " << file->ukuranFile << " KB)" << endl;
+
+        createSnapshot();
+    }
+    else
+    {
+        cout << "File tidak ditemukan" << endl;
+    }
+}
+
 void hapusFile()
 {
     string namaFolder;
@@ -521,6 +573,7 @@ int main()
         cout << "7. Tampilkan File di Folder" << endl;
         cout << "8. Tampilkan Semua File" << endl;
         cout << "9. Tambah Folder" << endl;
+        cout << "10. Edit File" << endl;
         cout << "0. Keluar" << endl;
 
         cout << "\nMasukkan Pilihan (ANGKA) : ";
@@ -582,6 +635,10 @@ int main()
 
             break;
         }
+
+        case 10:
+            editFile();
+            break;
 
         case 0:
             cout << "Terima kasih telah menggunakan Sistem Manajemen Repository!" << endl;
